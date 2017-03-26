@@ -23,7 +23,13 @@ The rest of the writeup will cover:
 
 The following were recording on 640x480 resolution at the highest quality setting.
 
-[![ScreenShot](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=dTuAnNhRAfs)
+### Track 1 - overhead view
+
+[![](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=dTuAnNhRAfs)
+
+### Track 2 - overhead view
+
+[![](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=InZHrVgjQGQ)
 
 ## Submission Contents
 
