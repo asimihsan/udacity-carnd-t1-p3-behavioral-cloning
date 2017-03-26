@@ -59,13 +59,14 @@ def draw_shadow(img, alpha_min=0.7, alpha_max=1.0):
 
 
 def translation(img, x_delta=30, y_delta=30):
+    rows, cols = img.shape[:2]
     t_x = random.randint(-x_delta, x_delta)
     t_y = random.randint(-y_delta, y_delta)
     M = np.float32([
         [1, 0, t_x],
         [0, 1, t_y],
     ])
-    return (cv2.warpAffine(img, M, img.shape[:2]), t_x)
+    return (cv2.warpAffine(img, M, (cols, rows)), t_x)
 
 
 def shear(img,
