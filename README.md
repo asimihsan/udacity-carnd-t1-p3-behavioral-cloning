@@ -10,6 +10,7 @@ This writeup documents my submission for [Term 1 Project 3](https://github.com/u
 
 The rest of the writeup will cover:
 
+- Videos of the car driving
 - Submission contents, what is contained in this repository.
 - Background to the assignment and prior art to the assignment itself and methods used in my solution.
 - Training data visualization and exploration.
@@ -17,6 +18,12 @@ The rest of the writeup will cover:
 - Training and validation methodology.
 - Architecture selection and hyperparameter tuning
 - Final model architecture
+
+## Videos of the car driving
+
+The following were recording on 640x480 resolution at the highest quality setting.
+
+[![ScreenShot](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=dTuAnNhRAfs)
 
 ## Submission Contents
 
