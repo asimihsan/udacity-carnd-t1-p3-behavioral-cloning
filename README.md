@@ -25,7 +25,7 @@ The following were recording on 640x480 resolution at the highest quality settin
 
 ### Track 1 - overhead view
 
-[![](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=dTuAnNhRAfs)
+[![](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=yvpT1ITQ97g)
 
 ### Track 2 - overhead view
 
@@ -148,9 +148,9 @@ However, as others in the Udacity nanodegree observed, the validation loss durin
 
 ## Architecture selection and hyperparameter tuning
 
-Not only are their a wide variety of possible deep neural network architectures to attempt, but moreover there are many non-architecture-related hyperparameters that need tuning, as I've outlined above. Rather than rely completely on my intution I used a Python package called [hyperopt](https://jaberg.github.io/hyperopt/), and a space search algorithm called [Tree of Parzen Estimators (TPE)](http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf) (Bergstra et. al 2011), to perform a search of all possible combinations of architectures and hyperparameters in a way that is more efficient than brute force. I would say this approach is very effective but also prone to local minima, and a lot of iterations with intuition and experimentation is required as well.
+Not only are there a wide variety of possible deep neural network architectures to attempt, but moreover there are many non-architecture-related hyperparameters that need tuning, as I've outlined above. Rather than rely completely on my intution I used a Python package called [hyperopt](https://jaberg.github.io/hyperopt/), and a space search algorithm called [Tree of Parzen Estimators (TPE)](http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf) (Bergstra et. al 2011), to perform a search of all possible combinations of architectures and hyperparameters in a way that is more efficient than brute force. I would say this approach is very effective but also prone to local minima, and a lot of iterations with intuition and experimentation is required as well.
 
-At a high level the promise of `hyperopt` is that you can specify any arbitrary function with arguments that returns some loss as a result you want to minimize, describe how to vary those arguments, and it will start exploring it using a method that approximates variables as trees of Gaussian Mixture Models (GMMs). You can see my description of these hyperparameters in [model.py lines 359 to 449](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L359-L449). By running `hyperopt` over these hyperparameters, and in each ieration minimizing the validation loss, I developed an intuition for the best values for each hyperparameter. Here is a summary:
+At a high level the promise of `hyperopt` is that you can specify any arbitrary function with arguments that returns some loss as a result you want to minimize, describe how to vary those arguments, and it will start exploring it using a method that approximates variables as trees of Gaussian Mixture Models (GMMs). You can see my description of these hyperparameters in [model.py lines 359 to 449](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L359-L449). By running `hyperopt` over these hyperparameters, and in each iteration minimizing the validation loss, I developed an intuition for the best values for each hyperparameter. Here is a summary:
 
 | Variable | Description | Search range | Chosen value | Notes |
 |:---------|:------------|:-------------|:-------------|:----------| 
@@ -176,7 +176,7 @@ In order to settle on values for `conv_filters` and `conv_kernels` I tried vario
 
 I ended up trying many permutations of 4 convolutional layers and 1 fully connected layer and I decided to keep max pooling as a way of allowing the model to learn translational invariance, which I thought would help it drive uphill and downhill on track 2.
 
-Moreover `hyperopt` seemed unable to decide is any kind of dropout was useful or not. Based on my intuition that dropout would have reduce overfitting for the flatten and dense layers, but that perhaps maxpooling was enough to reduce overfitting for the convolutional layers, I arbitrarily chose the values above.
+Moreover `hyperopt` seemed unable to decide if any kind of dropout was useful or not. Based on my intuition that dropout would have reduce overfitting for the flatten and dense layers, but that perhaps maxpooling was enough to reduce overfitting for the convolutional layers, I arbitrarily chose the values above.
 
 Here are some general observations about using `hyperopt` in this way:
 
