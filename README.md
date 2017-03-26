@@ -100,7 +100,7 @@ With this base set of training data I also augmented the training data in variou
 - At each time slice use the left and right camera images by adding or subtracting a `steering_delta` to the steering angle. This not only increases the training set size but also encourages the car to drive in the center of the correct part of the road. See: [model.py lines 151:165](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L151-L165).
 	- I did not know what value of `steering_delta` would produce the best result, so I treated it as a hyperparameter. Later on I discuss my hyperparameter tuning strategy. In contrast, in the NVIDIA paper they use trigonometry and precise camera placement to determine the best steering delta to apply.
 - For each image available to me I increase the training set size and reduce the risk of overfitting by applying various transforms in combination. In isolation, where the original image is in the top-left, they are:
-    - random brightness changes, by converting the image's color space to [L\*a\*b](https://en.wikipedia.org/wiki/Lab_color_space#CIELAB) and then multiplying the L-channel by a random factor between 0 and 2. See [util.py lines 8:13](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L8-L13).
+    - random brightness changes, by converting the image's color space to [L\*a\*b\*](https://en.wikipedia.org/wiki/Lab_color_space#CIELAB) and then multiplying the L-channel by a random factor between 0 and 2. See [util.py lines 8:13](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L8-L13).
 
 		![](images/05_brightness_augmentation.png?raw=true)    
 
@@ -120,7 +120,7 @@ With this base set of training data I also augmented the training data in variou
 
 For all center images used in training and driving I preprocessed them (see [model.py lines 133:158](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L133-L158)) by:
 
-- Converting their colorspace to [L\*a\*b](https://en.wikipedia.org/wiki/Lab_color_space#CIELAB). This helps during training because perceptually similar colors are closer in coordinate space, and moreover the lightness is separated out as a distinct channel and contains the most relevant information for this task.
+- Converting their colorspace to [L\*a\*b\*](https://en.wikipedia.org/wiki/Lab_color_space#CIELAB). This helps during training because perceptually similar colors are closer in coordinate space, and moreover the lightness is separated out as a distinct channel and contains the most relevant information for this task.
 - Cropping some number of pixels from the top of the image, as not all of the horizon is always relevant to driving. However when driving downhill sometimes the top-most pixels are useful. Hence how many top pixels to crop became a hyperparameter to tune.
 - Resizing the image to 128 x 128 pixels, to reduce training time without affecting driving performance too much.
 - Normalizing the range of the values of pixels between -0.5 to +0.5, to decrease training time without affecting driving performance.
@@ -144,7 +144,7 @@ At a high level the promise of `hyperopt` is that you can specify any arbitrary 
 | `crop_top` | How many pixels to crop from the top of the image, out of 160 pixels | `[0, 5, 10, ..., 70]` | `30` | Values between 20 and 70 seemed good. Cropping at all is better than not cropping. |
 | `steering_delta` | How much angle to add for left-camera images, and subtract for right-camera images | `[0.1, 0.0125, 0.0150, ..., 0.4]` | `0.225` | 0.2 to 0.275 seemed good |
 | `translation_delta` | For images translated in the x-axis, how much to multiply each pixel of x-translation by to add to the steering angle | `[0.004, 0.005, 0.006, ..., 0.010]` | `0.007` | |
-| `use_initial_scaling` | Whether to use an initial 1x1 convolution with 3 feature maps at the start of the CNN | `[True, False]` | `False` | Rather than get the CNN to guess what color space transformation to use I explicitly chose L\*a\*b. Using  this initial layer significantly increases training time for not much benefit |
+| `use_initial_scaling` | Whether to use an initial 1x1 convolution with 3 feature maps at the start of the CNN | `[True, False]` | `False` | Rather than get the CNN to guess what color space transformation to use I explicitly chose L\*a\*b\*. Using  this initial layer significantly increases training time for not much benefit |
 | `conv_activation` | What activation function to use in between convolutional layers | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
 | `conv_dropout` | What value of dropout to use between convolutional layers | `[0.0, 0.1, 0.2, ..., 1.0]` | `0.1` | `hyperopt` didn't find any preference for this value, so I used my intution |
 | `flatten_activation` | What activation function to use after the flatten layer | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
@@ -163,7 +163,9 @@ In order to settle on values for `conv_filters` and `conv_kernels` I tried vario
 
 I ended up trying many permutations of 4 convolutional layers and 1 fully connected layer.
 
-Also here are some general observations about using `hyperopt` in this way:
+Moreover `hyperopt` seemed unable to decide is any kind of dropout was useful or not. Based on my intuition that dropout would have reduce overfitting for the flatten and dense layers, but that perhaps maxpooling was enough to reduce overfitting for the convolutional layers, I arbitrarily chose the values above.
+
+Here are some general observations about using `hyperopt` in this way:
 
 -	I initially tried to optimize the kernel sizes and feature map sizes of convolutions and number of nodes in the fully-connected layers by representing these quantities are `hyperopt.hp.quniform`, i.e. uniformly-distributed values. I wasn't successful at all, even after ensuring that e.g. the number of feature maps increased for each layer of the convolutions, perhaps because of the size of the search space. I found that it's more fruitful to explicitly use `hyperopt.hp.choice` and provide a selection of e.g. 10 combinations to try out.
 - `hyperopt` is hard coded to make 20 random guesses before starting optimization based on the suggestion engine. In order to override this you need to do a little hack to set a value for `n_startup_jobs`. See [model.py lines 434:440](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L434-L440).
@@ -172,3 +174,34 @@ Also here are some general observations about using `hyperopt` in this way:
 
 | Layer | Description |
 |:------|:------------|
+| Convolution 7x7x64 | 7x7 kernel, 64 feature maps, valid padding |
+| PReLu activation | |
+| Maxpool 3x3 | |
+| Dropout 0.1 | Suppress 10% of nodes during training |
+|  | |
+| Convolution 5x5x96 | 5x5 kernel, 96 feature maps, valid padding |
+| PReLu activation | |
+| Maxpool 2x2 | |
+| Dropout 0.1 | Suppress 10% of nodes during training |
+|  | |
+| Convolution 3x3x128 | 3x3 kernel, 128 feature maps, valid padding |
+| PReLu activation | |
+| Maxpool 3x3 | |
+| Dropout 0.1 | Suppress 10% of nodes during training |
+|  | |
+| Convolution 3x3x160 | 3x3 kernel, 160 feature maps, valid padding |
+| PReLu activation | |
+| Maxpool 3x3 | |
+| Dropout 0.1 | Suppress 10% of nodes during training |
+|  | |
+| Flatten | |
+| Dropout 0.2 | Suppress 20% of nodes during training |
+| PReLu activation | |
+|  | |
+| Fully-connected 512 | |
+| Dropout 0.2 | Suppress 20% of nodes during training |
+| PReLu activation | |
+|  | |
+| Single output node | |
+
+See [model.py lines 451:464](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L451-L464) (the parameters) and [model.py lines 206:248](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L206-L248) (how the model is created using the parameters).
