@@ -10,10 +10,13 @@ This writeup documents my submission for [Term 1 Project 3](https://github.com/u
 
 The rest of the writeup will cover:
 
-- What is contained in this repository.
+- Submission contents, what is contained in this repository.
 - Background to the assignment and prior art to the assignment itself and methods used in my solution.
 - Training data visualization and exploration.
 - Training data collection and augmentation.
+- Training and validation methodology.
+- Architecture selection and hyperparameter tuning
+- Final model architecture
 
 ## Submission Contents
 
@@ -76,10 +79,20 @@ It's clear that there are substantially more examples of straight driving than t
 
 Keeping in mind the above, and after much experimentation, it turned out that training data collection and augmentation was the most critical factor in creating a successful model, rather than model architecture and hyperparameter tuning.
 
+### Collection
+
 In order to collect training data:
 
 - I drove twice clockwise and twice counter-clockwise on each of track 1 and track 2.
 - After some initial model training and testing, I identified parts of track 1 and track 2 that the model found difficult and collected additional "recovery" data. I would deliberate start the car on the extreme left/right of the road, start recording, and return the car to the middle of the road. By doing so the model would learn to associate driving close to and onto the edges of the road with recovering to the center of the road.
+
+### Sampling to flatten the distribution of angles
+
+In order to reduce the likelihood of overfitting on straight driving I both oversampled under-represented steering angles and undersampled over-represented steering angles. I used a histogram with 25 bins of aboslute steering angles (see above) and over/under sampled towards the average number of samples per bin, up to a maximum factor of 5, to "flatten" the distribution. See [model.py lines 106:125](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L106-L125). I found that too aggressively undersampling straight angles led to odd driving on straight roads. The distribution of angles afterwards looked like:
+
+![](images/09_flatter_distribution_of_angles.png?raw=true)
+
+### Augmentation
 
 With this base set of training data I also augmented the training data in various important ways:
 
@@ -95,8 +108,67 @@ With this base set of training data I also augmented the training data in variou
 
 		![](images/06_shadow_augmentation.png?raw=true)
 		
-	-	random shear with border replication (although more subtle this was still a vital augmentation method). See: [util.py lines 71 to 89](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L71-L89)
+	-	random shear with border replication (although more subtle this was still a vital augmentation method). See: [util.py lines 72 to 90](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L72-L90)
 
 		![](images/07_shear_augmentation.png?raw=true)
 		
-	-	random translations in both x and y up to 30 pixels. The y translations help the model deal with traveling uphill and downhill. The x translations help the model deliver small steering corrections for new scenarios. However how big t
+	-	random translations in both x and y up to 30 pixels without border replication. The y translations help the model deal with traveling uphill and downhill. The x translations help the model deliver small steering corrections for new scenarios. However how big of a `translation_delta` to apply per pixel of x translation was unknown and I treated it as a hyperparameter to tune for. See [util.py lines 61:69](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L61-L69) and [model.py lines 167:173](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L167-L173)
+
+		![](images/08_translation_augmentation.png?raw=true)
+
+### Preprocessing
+
+For all center images used in training and driving I preprocessed them (see [model.py lines 133:158](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/util.py#L133-L158)) by:
+
+- Converting their colorspace to [L\*a\*b](https://en.wikipedia.org/wiki/Lab_color_space#CIELAB). This helps during training because perceptually similar colors are closer in coordinate space, and moreover the lightness is separated out as a distinct channel and contains the most relevant information for this task.
+- Cropping some number of pixels from the top of the image, as not all of the horizon is always relevant to driving. However when driving downhill sometimes the top-most pixels are useful. Hence how many top pixels to crop became a hyperparameter to tune.
+- Resizing the image to 128 x 128 pixels, to reduce training time without affecting driving performance too much.
+- Normalizing the range of the values of pixels between -0.5 to +0.5, to decrease training time without affecting driving performance.
+
+I tried to use [CLAHE equalization](https://en.wikipedia.org/wiki/Adaptive_histogram_equalization#Contrast_Limited_AHE) to normalize the brightness range of images, but this caused very bad driving performance on track 2 so I excluded it from preprocessing.
+
+## Training and validation methodology
+
+I randomly shuffled the training set and split off 10% of it for validation purposes, and kept 90% for training. Moreover I used a feature of Keras call `fit_generator` which allowed me to process the ~50k images in the training set in batches of 50 images using Python generators. This allows me to use the very large data set of images without having to load all the images and their augmentations into memory. See [model.py lines 274:284](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L274-L284), [model.py lines 324:335](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L324-L335), and [model.py lines 134:190](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L134-L190).
+
+However, as others in the Udacity nanodegree observed, the validation loss during training doesn't correlate very well with driving performance. In addition to only picking models that minimized loss on the held-out validation set, I also stored all models trained at each epoch, and manually tried them all out in the simulator. I observed that the best models tended to get generated between epochs 5-10, and additional training didn't improve driving performance that much. I used an Adam optimizer with a smaller-than-default learning rate of `2e-4` as I observed this improved driving performance.
+
+## Architecture selection and hyperparameter tuning
+
+Not only are their a wide variety of possible deep neural network architectures to attempt, but moreover there are many non-architecture-related hyperparameters that need tuning, as I've outlined above. Rather than rely completely on my intution I used a Python package called [hyperopt](https://jaberg.github.io/hyperopt/), and a space search algorithm called [Tree of Parzen Estimators (TPE)](http://papers.nips.cc/paper/4443-algorithms-for-hyper-parameter-optimization.pdf) (Bergstra et. al 2011), to perform a search of all possible combinations of architectures and hyperparameters in a way that is more efficient than brute force. I would say this approach is very effective but also prone to local minima, and a lot of iterations with intuition and experimentation is required as well.
+
+At a high level the promise of `hyperopt` is that you can specify any arbitrary function with arguments that returns some loss as a result you want to minimize, describe how to vary those arguments, and it will start exploring it using a method that approximates variables as trees of Gaussian Mixture Models (GMMs). You can see my description of these hyperparameters in [model.py lines 359 to 449](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L359-L449). By running `hyperopt` over these hyperparameters, and in each ieration minimizing the validation loss, I developed an intuition for the best values for each hyperparameter. Here is a summary:
+
+| Variable | Description | Search range | Chosen value | Notes |
+|:---------|:------------|:-------------|:-------------|:----------| 
+| `crop_top` | How many pixels to crop from the top of the image, out of 160 pixels | `[0, 5, 10, ..., 70]` | `30` | Values between 20 and 70 seemed good. Cropping at all is better than not cropping. |
+| `steering_delta` | How much angle to add for left-camera images, and subtract for right-camera images | `[0.1, 0.0125, 0.0150, ..., 0.4]` | `0.225` | 0.2 to 0.275 seemed good |
+| `translation_delta` | For images translated in the x-axis, how much to multiply each pixel of x-translation by to add to the steering angle | `[0.004, 0.005, 0.006, ..., 0.010]` | `0.007` | |
+| `use_initial_scaling` | Whether to use an initial 1x1 convolution with 3 feature maps at the start of the CNN | `[True, False]` | `False` | Rather than get the CNN to guess what color space transformation to use I explicitly chose L\*a\*b. Using  this initial layer significantly increases training time for not much benefit |
+| `conv_activation` | What activation function to use in between convolutional layers | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
+| `conv_dropout` | What value of dropout to use between convolutional layers | `[0.0, 0.1, 0.2, ..., 1.0]` | `0.1` | `hyperopt` didn't find any preference for this value, so I used my intution |
+| `flatten_activation` | What activation function to use after the flatten layer | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
+| `flatten_dropout` | What value of dropout to use after the flatten layer | `[0.0, 0.1, 0.2, ..., 1.0]` | `0.2` | `hyperopt` didn't find any preference for this value, so I used my intution |
+| `dense_activation` | What activation function to use after each dense layer | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
+| `dense_dropout` | What value of dropout to use after each dense layer | `[0.0, 0.1, 0.2, ..., 1.0]` | `0.2` | `hyperopt` didn't find any preference for this value, so I used my intution |
+| `conv_filters` | What numbers of features maps to use for each convolutional layer | (see below) | `[64, 96, 128, 160]` | |
+| `conv_kernels` | What kernel sizes to use for each convolutional layer | (see below) | `[7, 5, 3, 3]` | |
+| `max_pools` | What pooling size to use for max pooling at each convolutional layer | (see below) | `[3, 2, 2, 2]` | |
+| `fc_depths` | How many layers and what sizes to use for the fully-connected layers | `[[512], [512, 512], [512, 512, 512]]` | `[[512]]` | I was curious if more than one fully-connected layer would help, but I observed that a single fully connected layer is best | 
+
+In order to settle on values for `conv_filters` and `conv_kernels` I tried various configurations inspired by two architectures:
+
+- The NVIDIA architecture from their paper (5 convolutional layers, 3 fully connected layers)
+- The [comma.ai architecture](https://github.com/commaai/research/blob/master/train_steering_model.py) (3 convolutional layers, 1 fully connected layer)
+
+I ended up trying many permutations of 4 convolutional layers and 1 fully connected layer.
+
+Also here are some general observations about using `hyperopt` in this way:
+
+-	I initially tried to optimize the kernel sizes and feature map sizes of convolutions and number of nodes in the fully-connected layers by representing these quantities are `hyperopt.hp.quniform`, i.e. uniformly-distributed values. I wasn't successful at all, even after ensuring that e.g. the number of feature maps increased for each layer of the convolutions, perhaps because of the size of the search space. I found that it's more fruitful to explicitly use `hyperopt.hp.choice` and provide a selection of e.g. 10 combinations to try out.
+- `hyperopt` is hard coded to make 20 random guesses before starting optimization based on the suggestion engine. In order to override this you need to do a little hack to set a value for `n_startup_jobs`. See [model.py lines 434:440](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L434-L440).
+
+## Final model architecture
+
+| Layer | Description |
+|:------|:------------|
