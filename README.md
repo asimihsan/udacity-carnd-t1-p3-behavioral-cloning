@@ -2,6 +2,8 @@
 
 ## Introduction
 
+(This repository uses [Git LFS](https://git-lfs.github.com/) to version control the large model and videos. Please install Git LFS and run `git install lfs` before attempting to clone this repo.)
+
 This writeup documents my submission for [Term 1 Project 3](https://github.com/udacity/CarND-Behavioral-Cloning-P3) of Udacity's [Self-Driving Car Nanodegree](https://medium.com/self-driving-cars/term-1-in-depth-on-udacitys-self-driving-car-curriculum-ffcf46af0c08). The goals of the project are to:
 
 - Build a model that predicts steering angles from images taken from the front of a simulated car,
@@ -29,7 +31,7 @@ The following were recording on 640x480 resolution at the highest quality settin
 
 ### Track 2 - overhead view
 
-[![](images/10_track_1_youtube.png?raw=true)](https://www.youtube.com/watch?v=InZHrVgjQGQ)
+[![](images/11_track_2_youtube.png?raw=true)](https://www.youtube.com/watch?v=InZHrVgjQGQ)
 
 ## Submission Contents
 
