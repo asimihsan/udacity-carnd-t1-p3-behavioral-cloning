@@ -158,10 +158,10 @@ At a high level the promise of `hyperopt` is that you can specify any arbitrary 
 
 In order to settle on values for `conv_filters` and `conv_kernels` I tried various configurations inspired by two architectures:
 
-- The NVIDIA architecture from their paper (5 convolutional layers, 3 fully connected layers)
-- The [comma.ai architecture](https://github.com/commaai/research/blob/master/train_steering_model.py) (3 convolutional layers, 1 fully connected layer)
+- The NVIDIA architecture from their paper (5 convolutional layers, use convolutional strides rather than pooling, 3 fully connected layers)
+- The [comma.ai architecture](https://github.com/commaai/research/blob/master/train_steering_model.py) (3 convolutional layers, use convolutional strides rather than pooling, 1 fully connected layer)
 
-I ended up trying many permutations of 4 convolutional layers and 1 fully connected layer.
+I ended up trying many permutations of 4 convolutional layers and 1 fully connected layer and I decided to keep max pooling as a way of allowing the model to learn translational invariance, which I thought would help it drive uphill and downhill on track 2.
 
 Moreover `hyperopt` seemed unable to decide is any kind of dropout was useful or not. Based on my intuition that dropout would have reduce overfitting for the flatten and dense layers, but that perhaps maxpooling was enough to reduce overfitting for the convolutional layers, I arbitrarily chose the values above.
 
