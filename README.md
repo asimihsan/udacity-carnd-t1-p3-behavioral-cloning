@@ -202,12 +202,12 @@ Here are some general observations about using `hyperopt` in this way:
 |  | |
 | Convolution 3x3x128 | 3x3 kernel, 128 feature maps, valid padding |
 | PReLu activation | |
-| Maxpool 3x3 | |
+| Maxpool 2x2 | |
 | Dropout 0.1 | Suppress 10% of nodes during training |
 |  | |
 | Convolution 3x3x160 | 3x3 kernel, 160 feature maps, valid padding |
 | PReLu activation | |
-| Maxpool 3x3 | |
+| Maxpool 2x2 | |
 | Dropout 0.1 | Suppress 10% of nodes during training |
 |  | |
 | Flatten | |
@@ -254,6 +254,7 @@ Be sure to load an image and preprocess it, and then you can do:
 
 ```python
 from keras import backend as K
+
 
 def get_all_layer_outputs(input):
     inp = model.input                                           # input placeholder
