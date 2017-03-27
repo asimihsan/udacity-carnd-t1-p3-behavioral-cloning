@@ -158,7 +158,7 @@ At a high level the promise of `hyperopt` is that you can specify any arbitrary 
 | Variable | Description | Search range | Chosen value | Notes |
 |:---------|:------------|:-------------|:-------------|:----------| 
 | `crop_top` | How many pixels to crop from the top of the image, out of 160 pixels | `[0, 5, 10, ..., 70]` | `30` | Values between 20 and 70 seemed good. Cropping at all is better than not cropping. |
-| `steering_delta` | How much angle to add for left-camera images, and subtract for right-camera images | `[0.1, 0.0125, 0.0150, ..., 0.4]` | `0.225` | 0.2 to 0.275 seemed good |
+| `steering_delta` | How much angle to add for left-camera images, and subtract for right-camera images | `[0.1, 0.0125, 0.0150, ..., 0.4]` | `0.250` | 0.2 to 0.275 seemed good |
 | `translation_delta` | For images translated in the x-axis, how much to multiply each pixel of x-translation by to add to the steering angle | `[0.004, 0.005, 0.006, ..., 0.010]` | `0.007` | |
 | `use_initial_scaling` | Whether to use an initial 1x1 convolution with 3 feature maps at the start of the CNN | `[True, False]` | `False` | Rather than get the CNN to guess what color space transformation to use I explicitly chose L\*a\*b\*. Using  this initial layer significantly increases training time for not much benefit |
 | `conv_activation` | What activation function to use in between convolutional layers | `['relu', 'elu', 'prelu']` | `prelu` | I excluded `srelu` from the search space because it doubled training time. |
