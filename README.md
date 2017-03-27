@@ -2,7 +2,7 @@
 
 ## Introduction
 
-(This repository uses [Git LFS](https://git-lfs.github.com/) to version control the large model and videos. Please install Git LFS and run `git install lfs` before attempting to clone this repo.)
+(This repository uses [Git LFS](https://git-lfs.github.com/) to version control the large model and videos. Please install Git LFS and run `git lfs install` before attempting to clone this repo.)
 
 This writeup documents my submission for [Term 1 Project 3](https://github.com/udacity/CarND-Behavioral-Cloning-P3) of Udacity's [Self-Driving Car Nanodegree](https://medium.com/self-driving-cars/term-1-in-depth-on-udacitys-self-driving-car-curriculum-ffcf46af0c08). The goals of the project are to:
 
@@ -20,6 +20,7 @@ The rest of the writeup will cover:
 - Training and validation methodology.
 - Architecture selection and hyperparameter tuning
 - Final model architecture
+- Convolutional layer visualizations
 
 ## Videos of the car driving
 
@@ -63,7 +64,7 @@ and from the significantly more difficult track 2 images look like:
 
 ![](images/02_car_view_center_track_2.jpg?raw=true)
 
-Just like the NVIDIA research paper, the car simulation provides you with three images per time instant; one from the center and two from additional left and right cameras. I will go into detail about how models can take advantage of these additional images.
+Just like the NVIDIA research paper, the car simulation provides you with three images per time instant; one from the center and two from additional left and right cameras. Later on I will go into detail about how models can take advantage of these additional images.
 
 My use of [hyperopt](https://jaberg.github.io/hyperopt/) in order to automatically explore the hyperparameter and network architecture space is not novel and indeed there is a simple wrapper library for Keras available as [hyperas](https://github.com/maxpumperla/hyperas). However I found that using hyperopt directly was more intuitive and gave me more flexibility.
 
@@ -99,7 +100,7 @@ Keeping in mind the above, and after much experimentation, it turned out that tr
 In order to collect training data:
 
 - I drove twice clockwise and twice counter-clockwise on each of track 1 and track 2.
-- After some initial model training and testing, I identified parts of track 1 and track 2 that the model found difficult and collected additional "recovery" data. I would deliberate start the car on the extreme left/right of the road, start recording, and return the car to the middle of the road. By doing so the model would learn to associate driving close to and onto the edges of the road with recovering to the center of the road.
+- After some initial model training and testing, I identified parts of track 1 and track 2 that the model found difficult and collected additional "recovery" data. I would deliberately start the car on the extreme left/right of the road, start recording, and return the car to the middle of the road. By doing so the model would learn to associate driving close to and onto the edges of the road with recovering to the center of the road.
 
 ### Sampling to flatten the distribution of angles
 
@@ -220,3 +221,64 @@ Here are some general observations about using `hyperopt` in this way:
 | Single output node | |
 
 See [model.py lines 451:464](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L451-L464) (the parameters) and [model.py lines 206:248](https://github.com/asimihsan/udacity-carnd-t1-p3-behavioral-cloning/blob/master/model.py#L206-L248) (how the model is created using the parameters).
+
+## Convolutional layer visualizations
+
+Here are three example center-camera images and the corresponding activations of the 64 feature maps of the first 7x7 convolutional layer. The images are rather large so I'll summarize some interesting findings and then follow up with the images:
+
+- Feature map 57 is interesting because it not only blurs the image but also is slightly resistant to shadows, and tries to see the outlines of the lines and road "beneath the shadows". I wonder if blurring is necessary or incidental?
+- I would have expected only a few feature maps to be sensitive to the red and white bumper lanes because of how obvious they are, but many of the feature maps are sensitive to either the red or the white portions of the lanes.
+- I expected to see some feature maps that could show the road lane lines even in the presence of shadows, but instead at least visually the shadow outlines seem to dominate. It seems as if this first layer is merely finding edges of any sort and later layers build upon this knowledge to identify road lane lines.
+
+### Image 1
+
+![](images/12_viz_image_1_input.png)
+
+![](images/12_viz_image_1_output.png)
+
+### Image 2
+
+![](images/12_viz_image_2_input.png)
+
+![](images/12_viz_image_2_output.png)
+
+### Image 3
+
+![](images/12_viz_image_3_input.png)
+
+![](images/12_viz_image_3_output.png)
+
+### Code for getting this output
+
+Be sure to load an image and preprocess it, and then you can do:
+
+```python
+from keras import backend as K
+
+def get_all_layer_outputs(input):
+    inp = model.input                                           # input placeholder
+    outputs = [layer.output for layer in model.layers]          # all layer outputs
+    functor = K.function([inp] + [K.learning_phase()], outputs) # evaluation function
+
+    # Testing
+    test = input[None, :, :, :]
+    layer_outputs = functor([test, 0.])  # 0.0 means test phase
+    return layer_outputs
+
+
+def visualize_first_conv(input):
+    layer_outputs = get_all_layer_outputs(input)
+    layer_of_interest = layer_outputs[1]
+    plt.figure(2, figsize=(15,19))
+    featuremaps = layer_of_interest[0].shape[2]
+    for featuremap in range(featuremaps):
+        plt.subplot(8, 8, featuremap+1)
+        plt.title('FeatureMap %d' % (featuremap, ))
+        plt.imshow(layer_of_interest[0, :, :, featuremap],
+                   interpolation='nearest',
+                   cmap='gray')
+```
+
+Also see:
+
+- [https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer](https://keras.io/getting-started/faq/#how-can-i-obtain-the-output-of-an-intermediate-layer)
