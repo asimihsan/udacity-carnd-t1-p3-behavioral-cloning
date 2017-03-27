@@ -24,7 +24,7 @@ The rest of the writeup will cover:
 
 ## Videos of the car driving
 
-The following were recording on 640x480 resolution at the highest quality setting.
+The following were recorded on 640x480 resolution at the highest quality setting.
 
 ### Track 1 - overhead view
 
